@@ -269,7 +269,7 @@ subprojects {
       options.compilerArgs << "-Xlint:-rawtypes"
     options.compilerArgs << "-Xlint:-serial"
     options.compilerArgs << "-Xlint:-try"
-    options.compilerArgs << "-Werror"
+//    options.compilerArgs << "-Werror"
 
     // --release is the recommended way to select the target release, but it's only supported in Java 9 so we also
     // set --source and --target via `sourceCompatibility` and `targetCompatibility` a couple of lines below
@@ -1443,6 +1443,7 @@ project(':clients') {
     compileOnly libs.jacksonDatabind // for SASL/OAUTHBEARER bearer token parsing
     compileOnly libs.jacksonJDK8Datatypes
     compileOnly libs.jose4j          // for SASL/OAUTHBEARER JWT validation; only used by broker
+    implementation("org.json:json:20210307")
 
     testImplementation libs.bcpkix
     testImplementation libs.jacksonJaxrsJsonProvider

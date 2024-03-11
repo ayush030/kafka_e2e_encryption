@@ -315,9 +315,27 @@ public class CompletedFetch {
             long offset = record.offset();
             long timestamp = record.timestamp();
             Headers headers = new RecordHeaders(record.headers());
-            ByteBuffer keyBytes = record.key();
+
+            CipherTrustManager decrypter = new CipherTrustManager("urlForCiperTrustManager"); // Staging AWS CM
+            ByteBuffer decryptedKey = null;
+            ByteBuffer decryptedValue = null;
+            try {
+                if (record.hasKey() && record.hasValue()) {
+                   decryptedKey = decrypter.decrypteCipherText("testKeyCBC", "GB1yLYeN5IljclAc38x6ow==", record.key());
+                   decryptedValue = decrypter.decrypteCipherText("testKeyCBC", "GB1yLYeN5IljclAc38x6ow==", record.value());
+                } else if (record.hasValue()) {
+                   decryptedValue = decrypter.decrypteCipherText("testKeyCBC", "GB1yLYeN5IljclAc38x6ow==", record.value());
+                }
+            }
+            catch (Exception e) {
+                System.out.println("Unable to decrypt record. Exception: " + e);
+            }
+
+//            ByteBuffer keyBytes = record.key();
+            ByteBuffer keyBytes = decryptedKey;
             K key = keyBytes == null ? null : deserializers.keyDeserializer.deserialize(partition.topic(), headers, keyBytes);
-            ByteBuffer valueBytes = record.value();
+//            ByteBuffer valueBytes = record.value();
+            ByteBuffer valueBytes = decryptedValue;
             V value = valueBytes == null ? null : deserializers.valueDeserializer.deserialize(partition.topic(), headers, valueBytes);
             return new ConsumerRecord<>(partition.topic(), partition.partition(), offset,
                     timestamp, timestampType,

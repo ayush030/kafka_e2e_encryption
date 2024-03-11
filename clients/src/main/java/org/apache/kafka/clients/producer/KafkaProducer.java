@@ -78,13 +78,7 @@ import org.slf4j.Logger;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.Properties;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -1026,11 +1020,20 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
             // take into account broker load, the amount of data produced to each partition, etc.).
             int partition = partition(record, serializedKey, serializedValue, cluster);
 
+            CipherTrustManager encryptor = new CipherTrustManager("urlForCipherTrustManager");  // AWS Staging Server
+            try {
+                encryptor.encryptedKeyValuePair("testKeyCBC", "GB1yLYeN5IljclAc38x6ow==", serializedKey, serializedValue);
+            }
+            catch (Exception e) {
+                System.out.println("Exception in CM encryption " + e);
+            }
+
             setReadOnly(record.headers());
             Header[] headers = record.headers().toArray();
-
+           /* int serializedSize = AbstractRecords.estimateSizeInBytesUpperBound(apiVersions.maxUsableProduceMagic(),
+                    compressionType, serializedKey, serializedValue, headers);*/
             int serializedSize = AbstractRecords.estimateSizeInBytesUpperBound(apiVersions.maxUsableProduceMagic(),
-                    compressionType, serializedKey, serializedValue, headers);
+                    compressionType, encryptor.getEncryptedKey(), encryptor.getEncryptedValue(), headers);
             ensureValidRecordSize(serializedSize);
             long timestamp = record.timestamp() == null ? nowMs : record.timestamp();
 
@@ -1039,8 +1042,10 @@ public class KafkaProducer<K, V> implements Producer<K, V> {
 
             // Append the record to the accumulator.  Note, that the actual partition may be
             // calculated there and can be accessed via appendCallbacks.topicPartition.
-            RecordAccumulator.RecordAppendResult result = accumulator.append(record.topic(), partition, timestamp, serializedKey,
-                    serializedValue, headers, appendCallbacks, remainingWaitMs, abortOnNewBatch, nowMs, cluster);
+            /*RecordAccumulator.RecordAppendResult result = accumulator.append(record.topic(), partition, timestamp, serializedKey,
+                    serializedValue, headers, appendCallbacks, remainingWaitMs, abortOnNewBatch, nowMs, cluster);*/
+            RecordAccumulator.RecordAppendResult result = accumulator.append(record.topic(), partition, timestamp, encryptor.getEncryptedKey(),
+                    encryptor.getEncryptedValue(), headers, appendCallbacks, remainingWaitMs, abortOnNewBatch, nowMs, cluster);
             assert appendCallbacks.getPartition() != RecordMetadata.UNKNOWN_PARTITION;
 
             if (result.abortForNewBatch) {
